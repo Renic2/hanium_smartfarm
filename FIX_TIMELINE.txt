@@ -1,0 +1,3 @@
+#수정 내용 TIMELINE
+
+2025.05.15: READ_THIS.md, FIX_TIMELINE.txt 추가
