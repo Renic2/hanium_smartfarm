@@ -1,0 +1,48 @@
+#include <DHT.h> // DHT22 센서 헤더파일
+#include <Wire.h> 
+#include <BH1750.h> // BH1750 센서 헤더파일 // I2C 핀이 A4(SDA), A5(SCL)
+
+#define Soil_Moisture_Sensor A0 // SEN030003 센서 아날로그 입력 핀 지정
+#define DHTPIN 2 // DHT22 센서 디지털 입력 핀 지정
+#define DHTTYPE DHT22
+
+DHT dht(DHTPIN, DHTTYPE);
+BH1750 lightMeter;
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin(); // I2C 시작 (BH1750 센서: I2C 통신을 사용)
+  lightMeter.begin();
+
+}
+
+void loop() {
+  int Soil_Moisture = analogRead(Soil_Moisture_Sensor); // 토양 수분 측정 (최대: 700, 최소: 0)
+  //int Soil_Moisture_Percent = map(Soil_Moisture,0,700,0,100); // 토양 수분 함량(%)
+  float h = dht.readHumidity(); // 습도값: 70~90%
+  float t = dht.readTemperature(); // 온도값: 적정 온도 15~22
+  float lux = lightMeter.readLightLevel();
+
+  if (t >= 15 && t <=22){
+    Serial.println("적정온도");
+  }
+  else if (t < 15){
+    Serial.println("온도가 낮습니다.");
+  }
+  else {
+    Serial.println("온도가 높습니다.");
+  } 
+ 
+  Serial.print("토양 수분: "); 
+  Serial.print(Soil_Moisture);
+  Serial.println("%");
+  Serial.print("습도: ");
+  Serial.println(h);
+  Serial.print("온도: ");
+  Serial.println(t);
+  Serial.print("광도: ");
+  Serial.print(lux);
+  Serial.println(" lx");
+
+  delay(2000); // DHT22센서 측정 시간: 2초
+}
