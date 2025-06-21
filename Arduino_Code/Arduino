@@ -6,6 +6,11 @@
 #define DHTPIN 2 // DHT22 센서 디지털 입력 핀 지정
 #define DHTTYPE DHT22
 
+#define RelayPin 7 // 열선 패드 디지털 입력 핀 지정
+#define Cooling_Fan 5 // 냉각팬 디지털 입력 핀 지정, MOSFET 사용
+#define LED_Light 9 // LED 디지털 입력 핀 지정
+#define LED_Plant_light 10 // 식물생장용 LED 디지털 입력 핀 지정
+
 DHT dht(DHTPIN, DHTTYPE);
 BH1750 lightMeter;
 
@@ -18,19 +23,28 @@ void setup() {
 
 void loop() {
   int Soil_Moisture = analogRead(Soil_Moisture_Sensor); // 토양 수분 측정 (최대: 700, 최소: 0)
-  //int Soil_Moisture_Percent = map(Soil_Moisture,0,700,0,100); // 토양 수분 함량(%)
+  int Soil_Moisture_Percent = map(Soil_Moisture,0,700,0,100); // 토양 수분 함량(%) - 보정 필요
   float h = dht.readHumidity(); // 습도값: 70~90%
   float t = dht.readTemperature(); // 온도값: 적정 온도 15~22
-  float lux = lightMeter.readLightLevel();
+  float lux = lightMeter.readLightLevel(); // 광도값: 0~65535 lx
+
+  analogWrite(LED_Light, 100); // LED 밝기 조절  
+  digitalWrite(LED_Plant_light, HIGH); // 식물생장용 LED 켜기
 
   if (t >= 15 && t <=22){
     Serial.println("적정온도");
+    digitalWrite(relayPin, LOW); // 릴레이 OFF(열선패드 꺼짐)
+    digitalWrite(Cooling_Fan, LOW); // 냉각팬 OFF
   }
   else if (t < 15){
     Serial.println("온도가 낮습니다.");
+    digitalWrite(relayPin, HIGH); // 릴레이 ON(열선패드 켜짐)
+    digitalWrite(Cooling_Fan, LOW); // 냉각팬 OFF
   }
   else {
     Serial.println("온도가 높습니다.");
+    digitalWrite(Cooling_Fan, HIGH); // 냉각팬 ON
+    digitalWrite(relayPin, LOW); // 릴레이 OFF(열선패드 꺼짐)
   } 
  
   Serial.print("토양 수분: "); 
