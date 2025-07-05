@@ -50,7 +50,7 @@ struct SensorData {
 
 void setup() {
   Serial.begin(9600);
-  
+  dht.begin();
   // 센서 초기화
   initializeSensors();
   
@@ -112,7 +112,13 @@ SensorData readSensors() {
   data.soilMoisture = analogRead(SOIL_MOISTURE_PIN);
   data.soilMoisturePercent = map(data.soilMoisture, 0, SOIL_MOISTURE_MAX, 0, 100);
   data.lightLevel = lightMeter.readLightLevel();
-  
+
+  Serial.print("TEMP:"); Serial.print(data.temperature);
+  Serial.print(",HUM:"); Serial.print(data.humidity);
+  Serial.print(",LIGHT:"); Serial.print(data.lightLevel);
+  Serial.print(",SOIL:"); Serial.println(data.soilMoisture);
+
+
   return data;
 }
 
