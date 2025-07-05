@@ -19,7 +19,7 @@ while True: # Main loop
             # 문자열 -> Dict
             soil = int(data.get('SOIL', 0)) # Soil Humid
             temp = int(data.get('TEMP', 0)) # Temp
-            humid = int(data.get('HUMID', 0)) # Humid
+            humid = int(data.get('HUM', 0)) # Humid
             light = int(data.get('LIGHT', 0)) # Light 
 
         except:
