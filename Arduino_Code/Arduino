@@ -1,75 +1,187 @@
-#include <DHT.h> // DHT22 센서 헤더파일
-#include <Wire.h> 
-#include <BH1750.h> // BH1750 센서 헤더파일 // I2C 핀이 A4(SDA), A5(SCL)
+// config.h - 설정 파일 분리
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#define Soil_Moisture_Sensor A0 // SEN030003 센서 아날로그 입력 핀 지정
-#define DHTPIN 2 // DHT22 센서 디지털 입력 핀 지정
-#define DHTTYPE DHT22
+// 센서 핀 정의
+#define SOIL_MOISTURE_PIN A0
+#define DHT_PIN 2
+#define LIGHT_SENSOR_SDA A4
+#define LIGHT_SENSOR_SCL A5
 
-#define Thermal_Pad 7 // 열선 패드 디지털 입력 핀 지정
-#define Cooling_Fan 5 // 냉각팬 디지털 입력 핀 지정, MOSFET 사용
-#define Water_Pump 6 // 물펌프 디지털 입력 핀 지정, MOSFET 사용
-#define LED_Light 9 // LED 디지털 입력 핀 지정
-#define LED_Plant_light 10 // 식물생장용 LED 디지털 입력 핀 지정
+// 액추에이터 핀 정의 (MOSFET 연결)
+#define THERMAL_PAD_PIN 7
+#define COOLING_FAN_PIN 5
+#define WATER_PUMP_PIN 6
+#define LED_LIGHT_PIN 9
+#define LED_PLANT_PIN 10
 
-DHT dht(DHTPIN, DHTTYPE); // DHT22 센서 객체 생성
-BH1750 lightMeter; // BH1750 센서 객체 생성
+// 센서 임계값
+#define TEMP_MIN 15.0
+#define TEMP_MAX 22.0
+#define SOIL_MOISTURE_MIN 30
+#define SOIL_MOISTURE_MAX 700
+
+// 타이밍 설정
+#define PUMP_DURATION 5000
+#define SENSOR_DELAY 2000
+#define LED_BRIGHTNESS 100
+
+#endif
+
+// Arduino_SmartFarm.ino - 스마트팜 시스템 메인 코드
+
+#include <DHT.h>
+#include <Wire.h>
+#include <BH1750.h>
+#include "config.h"
+
+// 센서 객체 생성
+DHT dht(DHT_PIN, DHT22);
+BH1750 lightMeter;
+
+// 센서 데이터 구조체
+struct SensorData {
+  float temperature;
+  float humidity;
+  int soilMoisture;
+  int soilMoisturePercent;
+  float lightLevel;
+};
 
 void setup() {
   Serial.begin(9600);
-  Wire.begin(); // I2C 시작 (BH1750 센서: I2C 통신을 사용)
-  lightMeter.begin(); // BH1750 센서 초기화
+  
+  // 센서 초기화
+  initializeSensors();
+  
+  // 액추에이터 초기화
+  initializeActuators();
+  
+  Serial.println("Smart Farm System Started");
 }
 
 void loop() {
+  // 센서 데이터 읽기
+  SensorData data = readSensors();
   
-  int Soil_Moisture = analogRead(Soil_Moisture_Sensor); // 토양 수분 측정 (최대: 700, 최소: 0)
-  int Soil_Moisture_Percent = map(Soil_Moisture,0,700,0,100); // 토양 수분 함량(%) - 보정 필요
-  float h = dht.readHumidity(); // 습도값: 70~90%
-  float t = dht.readTemperature(); // 온도값: 적정 온도 15~22
-  float lux = lightMeter.readLightLevel(); // 광도값: 0~65535 lx
+  // 환경 제어
+  controlTemperature(data.temperature);
+  controlIrrigation(data.soilMoisturePercent);
+  controlLighting();
+  
+  // 데이터 출력
+  printSensorData(data);
+  
+  delay(SENSOR_DELAY);
+}
 
-  analogWrite(LED_Light, 100); // LED 밝기 조절  
-  digitalWrite(LED_Plant_light, HIGH); // 식물생장용 LED 켜기
+// 센서 초기화 함수
+void initializeSensors() {
+  Wire.begin();
+  dht.begin();
+  
+  if (lightMeter.begin()) {
+    Serial.println("BH1750 initialized successfully");
+  } else {
+    Serial.println("BH1750 initialization failed");
+  }
+}
 
-  if (t >= 15 && t <=22){
+// 액추에이터 초기화 함수
+void initializeActuators() {
+  pinMode(THERMAL_PAD_PIN, OUTPUT);
+  pinMode(COOLING_FAN_PIN, OUTPUT);
+  pinMode(WATER_PUMP_PIN, OUTPUT);
+  pinMode(LED_LIGHT_PIN, OUTPUT);
+  pinMode(LED_PLANT_PIN, OUTPUT);
+  
+  // 모든 액추에이터 초기 상태 설정
+  digitalWrite(THERMAL_PAD_PIN, LOW);
+  digitalWrite(COOLING_FAN_PIN, LOW);
+  digitalWrite(WATER_PUMP_PIN, LOW);
+  digitalWrite(LED_PLANT_PIN, HIGH);
+  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+}
+
+// 센서 데이터 읽기 함수
+SensorData readSensors() {
+  SensorData data;
+  
+  data.temperature = dht.readTemperature();
+  data.humidity = dht.readHumidity();
+  data.soilMoisture = analogRead(SOIL_MOISTURE_PIN);
+  data.soilMoisturePercent = map(data.soilMoisture, 0, SOIL_MOISTURE_MAX, 0, 100);
+  data.lightLevel = lightMeter.readLightLevel();
+  
+  return data;
+}
+
+// 온도 제어 함수
+void controlTemperature(float temperature) {
+  if (isnan(temperature)) {
+    Serial.println("온도 센서 읽기 오류");
+    return;
+  }
+  
+  if (temperature >= TEMP_MIN && temperature <= TEMP_MAX) {
     Serial.println("적정온도");
-    digitalWrite(Thermal_Pad, LOW); // 릴레이 OFF(열선패드 꺼짐)
-    digitalWrite(Cooling_Fan, LOW); // 냉각팬 OFF
-  }
-  else if (t < 15){
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else if (temperature < TEMP_MIN) {
     Serial.println("온도가 낮습니다.");
-    digitalWrite(Thermal_Pad, HIGH); // 릴레이 ON(열선패드 켜짐)
-    digitalWrite(Cooling_Fan, LOW); // 냉각팬 OFF
-  }
-  else {
+    digitalWrite(THERMAL_PAD_PIN, HIGH);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else {
     Serial.println("온도가 높습니다.");
-    digitalWrite(Cooling_Fan, HIGH); // 냉각팬 ON
-    digitalWrite(Thermal_Pad, LOW); // 릴레이 OFF(열선패드 꺼짐)
-  } 
- 
-  // 토양 수분이 30% 미만일 때
-  if (Soil_Moisture_Percent < 30) { 
-    Serial.println("토양 수분이 부족합니다. 물을 주십시오.");
-    analogWrite(Water_Pump, 100); // 물펌프 ON
-    delay(5000); // 물펌프 작동 시간: 5초
-    digitalWrite(Water_Pump, LOW); // 물펌프 OFF  
-  } 
-  else {
-    Serial.println("토양 수분이 적정합니다.");
-    digitalWrite(Water_Pump, LOW); // 물펌프 OFF
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, HIGH);
   }
+}
 
-  Serial.print("토양 수분: "); 
-  Serial.print(Soil_Moisture);
-  Serial.println("%");
-  Serial.print("습도: ");
-  Serial.println(h);
+// 관개 제어 함수
+void controlIrrigation(int moisturePercent) {
+  static unsigned long lastPumpTime = 0;
+  unsigned long currentTime = millis();
+  
+  if (moisturePercent < SOIL_MOISTURE_MIN) {
+    // 연속 급수 방지를 위한 시간 체크
+    if (currentTime - lastPumpTime > PUMP_DURATION * 2) {
+      Serial.println("토양 수분이 부족합니다. 물을 급수합니다.");
+      digitalWrite(WATER_PUMP_PIN, HIGH);
+      delay(PUMP_DURATION);
+      digitalWrite(WATER_PUMP_PIN, LOW);
+      lastPumpTime = currentTime;
+    }
+  } else {
+    Serial.println("토양 수분이 적정합니다.");
+    digitalWrite(WATER_PUMP_PIN, LOW);
+  }
+}
+
+// 조명 제어 함수
+void controlLighting() {
+  // 기본 조명 설정 (향후 조도 센서 기반 제어 추가 가능)
+  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+  digitalWrite(LED_PLANT_PIN, HIGH);
+}
+
+// 센서 데이터 출력 함수
+void printSensorData(const SensorData& data) {
+  Serial.println("=== 센서 데이터 ===");
   Serial.print("온도: ");
-  Serial.println(t);
+  Serial.print(data.temperature);
+  Serial.println("°C");
+  
+  Serial.print("습도: ");
+  Serial.print(data.humidity);
+  Serial.println("%");
+  
+  Serial.print("토양 수분: ");
+  Serial.print(data.soilMoisturePercent);
+  Serial.println("%");
+  
   Serial.print("광도: ");
-  Serial.print(lux);
+  Serial.print(data.lightLevel);
   Serial.println(" lx");
-
-  delay(2000); // DHT22센서 측정 시간: 2초
+  Serial.println();
 }
