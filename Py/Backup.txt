@@ -1,0 +1,193 @@
+// config.h - 설정 파일 분리
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// 센서 핀 정의
+#define SOIL_MOISTURE_PIN A0
+#define DHT_PIN 2
+#define LIGHT_SENSOR_SDA A4
+#define LIGHT_SENSOR_SCL A5
+
+// 액추에이터 핀 정의 (MOSFET 연결)
+#define THERMAL_PAD_PIN 7
+#define COOLING_FAN_PIN 5
+#define WATER_PUMP_PIN 6
+#define LED_LIGHT_PIN 9
+#define LED_PLANT_PIN 10
+
+// 센서 임계값
+#define TEMP_MIN 15.0
+#define TEMP_MAX 22.0
+#define SOIL_MOISTURE_MIN 30
+#define SOIL_MOISTURE_MAX 700
+
+// 타이밍 설정
+#define PUMP_DURATION 5000
+#define SENSOR_DELAY 2000
+#define LED_BRIGHTNESS 100
+
+#endif
+
+// Arduino_SmartFarm.ino - 스마트팜 시스템 메인 코드
+
+#include <DHT.h>
+#include <Wire.h>
+#include <BH1750.h>
+#include "config.h"
+
+// 센서 객체 생성
+DHT dht(DHT_PIN, DHT22);
+BH1750 lightMeter;
+
+// 센서 데이터 구조체
+struct SensorData {
+  float temperature;
+  float humidity;
+  int soilMoisture;
+  int soilMoisturePercent;
+  float lightLevel;
+};
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  // 센서 초기화
+  initializeSensors();
+  
+  // 액추에이터 초기화
+  initializeActuators();
+  
+  Serial.println("Smart Farm System Started");
+}
+
+void loop() {
+  // 센서 데이터 읽기
+  SensorData data = readSensors();
+  
+  // 환경 제어
+  controlTemperature(data.temperature);
+  controlIrrigation(data.soilMoisturePercent);
+  controlLighting();
+  
+  // 데이터 출력
+  printSensorData(data);
+  
+  delay(SENSOR_DELAY);
+}
+
+// 센서 초기화 함수
+void initializeSensors() {
+  Wire.begin();
+  dht.begin();
+  
+  if (lightMeter.begin()) {
+    Serial.println("BH1750 initialized successfully");
+  } else {
+    Serial.println("BH1750 initialization failed");
+  }
+}
+
+// 액추에이터 초기화 함수
+void initializeActuators() {
+  pinMode(THERMAL_PAD_PIN, OUTPUT);
+  pinMode(COOLING_FAN_PIN, OUTPUT);
+  pinMode(WATER_PUMP_PIN, OUTPUT);
+  pinMode(LED_LIGHT_PIN, OUTPUT);
+  pinMode(LED_PLANT_PIN, OUTPUT);
+  
+  // 모든 액추에이터 초기 상태 설정
+  digitalWrite(THERMAL_PAD_PIN, LOW);
+  digitalWrite(COOLING_FAN_PIN, LOW);
+  digitalWrite(WATER_PUMP_PIN, LOW);
+  digitalWrite(LED_PLANT_PIN, HIGH);
+  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+}
+
+// 센서 데이터 읽기 함수
+SensorData readSensors() {
+  SensorData data;
+  
+  data.temperature = dht.readTemperature();
+  data.humidity = dht.readHumidity();
+  data.soilMoisture = analogRead(SOIL_MOISTURE_PIN);
+  data.soilMoisturePercent = map(data.soilMoisture, 0, SOIL_MOISTURE_MAX, 0, 100);
+  data.lightLevel = lightMeter.readLightLevel();
+
+  Serial.print("TEMP:"); Serial.print(data.temperature);
+  Serial.print(",HUM:"); Serial.print(data.humidity);
+  Serial.print(",LIGHT:"); Serial.print(data.lightLevel);
+  Serial.print(",SOIL:"); Serial.println(data.soilMoisture);
+
+
+  return data;
+}
+
+// 온도 제어 함수
+void controlTemperature(float temperature) {
+  if (isnan(temperature)) {
+    Serial.println("온도 센서 읽기 오류");
+    return;
+  }
+  
+  if (temperature >= TEMP_MIN && temperature <= TEMP_MAX) {
+    Serial.println("적정온도");
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else if (temperature < TEMP_MIN) {
+    Serial.println("온도가 낮습니다.");
+    digitalWrite(THERMAL_PAD_PIN, HIGH);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else {
+    Serial.println("온도가 높습니다.");
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, HIGH);
+  }
+}
+
+// 관개 제어 함수
+void controlIrrigation(int moisturePercent) {
+  static unsigned long lastPumpTime = 0;
+  unsigned long currentTime = millis();
+  
+  if (moisturePercent < SOIL_MOISTURE_MIN) {
+    // 연속 급수 방지를 위한 시간 체크
+    if (currentTime - lastPumpTime > PUMP_DURATION * 2) {
+      Serial.println("토양 수분이 부족합니다. 물을 급수합니다.");
+      digitalWrite(WATER_PUMP_PIN, HIGH);
+      delay(PUMP_DURATION);
+      digitalWrite(WATER_PUMP_PIN, LOW);
+      lastPumpTime = currentTime;
+    }
+  } else {
+    Serial.println("토양 수분이 적정합니다.");
+    digitalWrite(WATER_PUMP_PIN, LOW);
+  }
+}
+
+// 조명 제어 함수
+void controlLighting() {
+  // 기본 조명 설정 (향후 조도 센서 기반 제어 추가 가능)
+  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+  digitalWrite(LED_PLANT_PIN, HIGH);
+}
+
+// 센서 데이터 출력 함수
+void printSensorData(const SensorData& data) {
+  Serial.println("=== 센서 데이터 ===");
+  Serial.print("온도: ");
+  Serial.print(data.temperature);
+  Serial.println("°C");
+  
+  Serial.print("습도: ");
+  Serial.print(data.humidity);
+  Serial.println("%");
+  
+  Serial.print("토양 수분: ");
+  Serial.print(data.soilMoisturePercent);
+  Serial.println("%");
+  
+  Serial.print("광도: ");
+  Serial.print(data.lightLevel);
+  Serial.println(" lx");
+  Serial.println();
+}
