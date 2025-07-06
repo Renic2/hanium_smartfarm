@@ -47,3 +47,34 @@ while True: # Main loop
     
 
 time.sleep(2) # Loop Delay
+
+class PID:
+    def __init__(self, Kp, Ki, Kd, setpoint=0):
+        self.Kp = Kp # 비례 게인
+        self.Ki = Ki # 적분 게인
+        self.Kd = Kd # 미분 게인
+
+        self.setpoint = setpoint # 목표값
+        self.last_error = 0
+        self.integral = 0
+        self.lasttime = None
+
+    def compute(self, measured_value):
+        current_time = time.time()
+        error = self.setpoint - measured_value
+
+        dt = 0
+        if self.last_time is not None:
+            dt = current_time - self.last_time
+
+        self.integral += error * dt if dt > 0 else 0
+
+        derivative = (error - self.last_error) / dt  if dt > 0 else 0
+
+        # PID OUTPUT
+        output = (self.Kp * error) + (self.Ki * self.integral) + (self.Kd * derivative)
+
+        self.last_error = error 
+        self.last_time = current_time
+
+        return output
