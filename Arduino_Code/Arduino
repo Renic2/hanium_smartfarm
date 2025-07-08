@@ -1,7 +1,3 @@
-// config.h - 설정 파일 분리
-#ifndef CONFIG_H
-#define CONFIG_H
-
 // 센서 핀 정의
 #define SOIL_MOISTURE_PIN A0
 #define DHT_PIN 2
@@ -26,14 +22,10 @@
 #define SENSOR_DELAY 2000
 #define LED_BRIGHTNESS 100
 
-#endif
-
-// Arduino_SmartFarm.ino - 스마트팜 시스템 메인 코드
-
+// 라이브러리 포함
 #include <DHT.h>
 #include <Wire.h>
 #include <BH1750.h>
-#include "config.h"
 
 // 센서 객체 생성
 DHT dht(DHT_PIN, DHT22);
