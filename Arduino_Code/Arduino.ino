@@ -196,6 +196,7 @@ SensorData readSensors() {
 
 // 시리얼 명령 수신 함수
 
+
 void processSerialCommand(String cmd) {
   cmd.trim();
 
@@ -217,5 +218,15 @@ void processSerialCommand(String cmd) {
     } else if (cmd.endsWith("OFF")) {
       digitalWrite(THERMAL_PAD_PIN, LOW);
     }
-  }
-}
+  } else if (cmd.startsWith("LED1:") || cmd.startsWith("LED1: ")) {
+    if (cmd.endsWith("ON")) {
+      digitalWrite(LED_PLANT_PIN, HIGH);
+    } else if (cmd.endsWith("OFF")) {
+      digitalWrite(LED_PLANT_PIN, LOW);
+    }
+  } else if (cmd.startsWith("LED2:") || cmd.startsWith("LED2: ")) {
+    if (cmd.endsWith("ON")) {
+      digitalWrite(LED_LIGHT_PIN, HIGH);
+    } else if (cmd.endsWith("OFF")) {
+      digitalWrite(LED_LIGHT_PIN, LOW);}
+  } 
