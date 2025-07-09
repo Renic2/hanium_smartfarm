@@ -124,9 +124,30 @@ SensorData readSensors() {
   return data;
 }
 
+// 온도 제어 함수
+/*void controlTemperature(float temperature) {
+  if (isnan(temperature)) {
+    Serial.println("온도 센서 읽기 오류");
+    return;
+  }
+  
+  if (temperature >= TEMP_MIN && temperature <= TEMP_MAX) {
+    Serial.println("적정온도");
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else if (temperature < TEMP_MIN) {
+    Serial.println("온도가 낮습니다.");
+    digitalWrite(THERMAL_PAD_PIN, HIGH);
+    digitalWrite(COOLING_FAN_PIN, LOW);
+  } else {
+    Serial.println("온도가 높습니다.");
+    digitalWrite(THERMAL_PAD_PIN, LOW);
+    digitalWrite(COOLING_FAN_PIN, HIGH);
+  }
+}*/
+
 // 관개 제어 함수
-/*
-void controlIrrigation(int moisturePercent) {
+/*void controlIrrigation(int moisturePercent) {
   static unsigned long lastPumpTime = 0;
   unsigned long currentTime = millis();
   
@@ -143,10 +164,38 @@ void controlIrrigation(int moisturePercent) {
     Serial.println("토양 수분이 적정합니다.");
     digitalWrite(WATER_PUMP_PIN, LOW);
   }
-}
-*/
+}*/
+
+// 조명 제어 함수
+/*void controlLighting() {
+  // 기본 조명 설정 (향후 조도 센서 기반 제어 추가 가능)
+  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+  digitalWrite(LED_PLANT_PIN, HIGH);
+}*/
+
+// 센서 데이터 출력 함수
+/*void printSensorData(const SensorData& data) {
+  Serial.println("=== 센서 데이터 ===");
+  Serial.print("온도: ");
+  Serial.print(data.temperature);
+  Serial.println("°C");
+  
+  Serial.print("습도: ");
+  Serial.print(data.humidity);
+  Serial.println("%");
+  
+  Serial.print("토양 수분: ");
+  Serial.print(data.soilMoisturePercent);
+  Serial.println("%");
+  
+  Serial.print("광도: ");
+  Serial.print(data.lightLevel);
+  Serial.println(" lx");
+  Serial.println();
+}*/
 
 // 시리얼 명령 수신 함수
+
 
 void processSerialCommand(String cmd) {
   cmd.trim();
