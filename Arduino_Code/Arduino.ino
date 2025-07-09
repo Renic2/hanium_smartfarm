@@ -56,25 +56,12 @@ void loop() {
   // 센서 데이터 읽기
   SensorData data = readSensors();
   
-  // 환경 제어
-  /*
-  controlTemperature(data.temperature);
-  controlIrrigation(data.soilMoisturePercent);
-  controlLighting();
-  */
-  
-  // 데이터 출력
-  /*
-  printSensorData(data);
-  delay(SENSOR_DELAY);
-  */
-
   // 시리얼 명령 수신 및 처리
   if (Serial.available() > 0) {
   String command = Serial.readStringUntil('\n');
   processSerialCommand(command);
   }
-
+  delay(2000);
 }
 
 // 센서 초기화 함수
@@ -123,28 +110,6 @@ SensorData readSensors() {
 
   return data;
 }
-
-// 관개 제어 함수
-/*
-void controlIrrigation(int moisturePercent) {
-  static unsigned long lastPumpTime = 0;
-  unsigned long currentTime = millis();
-  
-  if (moisturePercent < SOIL_MOISTURE_MIN) {
-    // 연속 급수 방지를 위한 시간 체크
-    if (currentTime - lastPumpTime > PUMP_DURATION * 2) {
-      Serial.println("토양 수분이 부족합니다. 물을 급수합니다.");
-      digitalWrite(WATER_PUMP_PIN, HIGH);
-      delay(PUMP_DURATION);
-      digitalWrite(WATER_PUMP_PIN, LOW);
-      lastPumpTime = currentTime;
-    }
-  } else {
-    Serial.println("토양 수분이 적정합니다.");
-    digitalWrite(WATER_PUMP_PIN, LOW);
-  }
-}
-*/
 
 // 시리얼 명령 수신 함수
 
