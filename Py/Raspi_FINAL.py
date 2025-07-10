@@ -4,7 +4,7 @@
 #                  PID 제어로 입력받은 온도값 유지  Clear
 
 import serial
-import serial.tools.list_ports # 자동 포트 찾기
+from serial.tools import list_ports # 자동 포트 찾기
 import time
 
 import serial.tools.list_ports_osx
