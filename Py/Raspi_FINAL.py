@@ -4,10 +4,10 @@
 #                  PID 제어로 입력받은 온도값 유지  Clear
 
 import serial
-from serial.tools import list_ports # 자동 포트 찾기
+import serial.tools.list_ports # 자동 포트 찾기
 import time
 
-import serial.tools.list_ports_osx
+from serial.tools import list_ports
 
 ser = None
 is_locked = False # 포트 탐색 루프 잠금 여부
