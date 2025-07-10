@@ -88,8 +88,10 @@ void initializeActuators() {
   digitalWrite(THERMAL_PAD_PIN, LOW);
   digitalWrite(COOLING_FAN_PIN, LOW);
   digitalWrite(WATER_PUMP_PIN, LOW);
-  digitalWrite(LED_PLANT_PIN, HIGH);
-  analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+  //digitalWrite(LED_PLANT_PIN, HIGH);
+  digitalWrite(LED_PLANT_PIN, LOW);
+  //analogWrite(LED_LIGHT_PIN, LED_BRIGHTNESS);
+  digitalWrite(LED_LIGHT_PIN, LOW);
 }
 
 // 센서 데이터 읽기 함수
