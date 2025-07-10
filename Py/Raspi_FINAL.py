@@ -32,7 +32,7 @@ def connect_lock(): # 연결 시도
 
         try:
             ser = serial.Serial(port, 9600, timeout=1)
-            print=(f"연결 성공 : {port}")
+            print(f"연결 성공 : {port}")
             is_locked = True # connect_lock을 LOCK 시킴
 
         except Exception as e:
