@@ -151,3 +151,4 @@ void processSerialCommand(String cmd) {
     } else if (cmd.endsWith("OFF")) {
       digitalWrite(LED_LIGHT_PIN, LOW);}
   } 
+}
