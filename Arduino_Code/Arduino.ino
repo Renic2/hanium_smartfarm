@@ -69,12 +69,14 @@ void initializeSensors() {
   Wire.begin();
   dht.begin();
   
+/*
   if (lightMeter.begin()) {
     Serial.println("BH1750 initialized successfully");
   } else {
     Serial.println("BH1750 initialization failed");
   }
 }
+*/
 
 // 액추에이터 초기화 함수
 void initializeActuators() {
@@ -106,8 +108,8 @@ SensorData readSensors() {
 
   Serial.print("TEMP:"); Serial.print(data.temperature);
   Serial.print(",HUM:"); Serial.print(data.humidity);
-  Serial.print(",LIGHT:"); Serial.print(data.lightLevel);
-  Serial.print(",SOIL:"); Serial.println(data.soilMoisture);
+  //Serial.print(",LIGHT:"); Serial.print(data.lightLevel);
+  //Serial.print(",SOIL:"); Serial.println(data.soilMoisture);
 
 
   return data;
