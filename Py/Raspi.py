@@ -7,7 +7,7 @@ Max_Soil = 600 # 토양습도 상한 (혹시 모르기에 값을 좀 줄여놈)
 Min_Soil = 30 # 토양습도 하한
 
 # PORT and Speed Setting
-ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+ser = serial.Serial('COM4', 9600, timeout=1)
 time.sleep(2) # Waiting for Connetion
 
 def send_command(cmd_str): # Sending to Arduino
@@ -17,7 +17,7 @@ while True: # Main loop
     if ser.in_waiting: # If Received data is exist
         line = ser.readline().decode('utf-8').strip()
         # 한 줄 읽고 디코딩
-        print(f"Senserdata:", line)
+          
 
         try:
             data = dict(item.split(':') for item in line.split(','))
