@@ -75,8 +75,9 @@ void initializeSensors() {
   } else {
     Serial.println("BH1750 initialization failed");
   }
-}
 */
+}
+
 
 // 액추에이터 초기화 함수
 void initializeActuators() {
