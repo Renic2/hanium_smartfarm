@@ -40,7 +40,7 @@ log_dir = "logs"
 os.makedirs(log_dir, exist_ok=True)
 
 # 로그 파일명 (ex: logs/2025-06-28_23:50:23.log)
-log_filename = datetime.now().strftime("log/%Y-%m-%d.log")
+log_filename = datetime.now().strftime("%Y-%m-%d.log")
 log_path = os.path.join(log_dir, log_filename)
 
 # Logging 모듈 설정
@@ -116,7 +116,6 @@ def send_command(cmd_str): # 명령어 전송 함수
 
     try:
         ser.write((cmd_str + "\n").encode('utf-8'))
-        thread_safe_print(f"[전송] {cmd_str}")
 
     except Exception as e:
         thread_safe_print(f"[전송 실패] : {e}")
