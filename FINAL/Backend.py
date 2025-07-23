@@ -8,7 +8,7 @@ import serial   # serial 통신
 import serial.tools.list_ports
 import logging  # 로그 기록
 import threading # 멀티스레딩 구현
-from flask import Flask, request # Flask 웹 서버 구현
+from flask import Flask, request, jsonify # Flask 웹 서버 구현
 from datetime import datetime  # 로그 파일명에 현재 시간 사용
 
 # Flask 세팅
@@ -101,8 +101,8 @@ def connect_lock(): # 시리얼 포트 연결 함수, 포트 탐색시 잠김
         
 # 명령어 전송
 # 아두이노에서 받는 명령어
-# 형식- control_cmd:FAN,PUMP,PNT_LED,WHITE_LED,HEAT_PANNEL
-# 실제 출력- control_cmd:255,255,1,0,1
+# 형식- FAN,PUMP,PNT_LED,WHITE_LED,HEAT_PANNEL
+# 실제 출력- 255,255,1,0,1
 def send_cmd(cmd_str):
     global control_value
     cmd_list = [
@@ -226,4 +226,49 @@ def auto_control():
 
 @app.route('/status', methods=['GET'])
 def get_status():
+    return jsonify({
+        "SENSOR": sensor_data,
+        "CONTROL": control_value,
+        "SYSTEM": system_status,
+        "TARGET": condition_data,
+        "MANUAL_OVERRIDE": mannual_override
+    })
+
+@app.route('/control', methods=['POST'])
+def manual_control():
+    data = request.json
+    for device, value in data.items():
+        mannual_override[device] = value
+        if device in ["FAN","PUMP"]:
+            control_value[device] = int(value)
+
+        else:
+            control_value[device] = 1 if value == "ON" else 0
+
+    send_cmd()
+    return jsonify({"MESSAGE":"수동 제어 실행","MANUAL_OVERRIDE": mannual_override})
+
+@app.route('/control/reset', methods=['POST'])
+def reset_control():
+    mannual_override.clear()  # 수동 제어 값 초기화
+    return jsonify({"MESSAGE": "수동 제어 모드 해제"})
+
+@app.route('/set_target', methods=['POST'])
+def set_target():
+    data = request.json
+    if "TEMP" in data:
+        condition_data["TARGET_TEMP"] = float(data["TEMP"])
     
+    if "SOIL" in data:
+        condition_data["TARGET_SOIL"] = float(data["SOIL"])
+
+    return jsonify({
+        "MESSAGE": "목표 값 설정 완료", "TARGET": condition_data
+    })
+
+if __name__ == "__main__":
+    connect_lock()  # 시리얼 포트 연결
+    threading.Thread(target=get_sensor_data, daemon=True).start()  # 센서 데이터 읽기 스레드 시작
+    threading.Thread(target=auto_control, daemon=True).start()  # 자동 제어 스레드 시작
+
+    app.run(host='0.0.0.0', port=5000)  # Flask 서버 실행
