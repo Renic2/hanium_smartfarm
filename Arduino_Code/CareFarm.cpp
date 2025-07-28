@@ -21,11 +21,6 @@ CareFarm::CareFarm()
   const int LED_PLANT_PIN = 6;
   const int THERMAL_PAD_PIN = 7;
 
-  // 센서 임계값
-  const float TEMP_MIN = 15.0;
-  const float TEMP_MAX = 22.0;
-  const int SOIL_MOISTURE_MIN = 30;
-  const int SOIL_MOISTURE_MAX = 700;
   // 타이밍 설정
   const int PUMP_DURATION = 5000;
   const int SENSOR_DELAY = 2000;
