@@ -4,7 +4,7 @@ class CareFarm {
         void initializeSensors();
         void initializeActuators();
         SensorData readSensors();
-        void processSerialCommand(String cmd);
+        void processSerialCommand(String);
        
         struct SensorData {
             float temperature;
