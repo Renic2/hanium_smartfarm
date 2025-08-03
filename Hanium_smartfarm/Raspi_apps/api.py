@@ -10,6 +10,8 @@ import uvicorn
 import threading
 import time
 import json
+import subprocess
+from fastapi.responses import HTMLResponse
 
 from util import log
 import config
@@ -127,15 +129,99 @@ def broadcast_loop():
         time.sleep(2) # 2초마다 상태 전송
 
 # --- 서버 실행 함수 ---
-def run_api_server(state_instance, hardware_instance, camera_instance):
+def run_api_server(state_instance, hardware_instance, camera_instance, ap_mode=False):
     # main.py에서 이 함수를 호출하여 API 서버를 실행합니다.
     global system_state, hardware_controller, camera_handler
     system_state = state_instance
     hardware_controller = hardware_instance
     camera_handler = camera_instance
     
-    # 백그라운드에서 WebSocket 브로드캐스트 루프 시작
-    threading.Thread(target=broadcast_loop, daemon=True).start()
+    # AP 모드가 아닐시 백그라운드에서 WebSocket 브로드캐스트 루프 시작
+    if not ap_mode:
+        threading.Thread(target=broadcast_loop, daemon=True).start()
     
-    log.info("Starting API server with Uvicorn...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host_ip = "0.0.0.0"
+
+    log.info(f"Starting API server in {'AP' if ap_mode else 'Normal'} mode on {host_ip}:8000")
+    uvicorn.run(app, host=host_ip, port=8000)
+
+# AP 모드 전용 엔드포인트
+@app.get("/", response_class=HTMLResponse)
+async def serve_setup_page():
+    # Wi-Fi 설정용 기본 HTML 페이지를 보여줌
+    try:
+        with open("index.html", "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), status_code=200)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Setup page not found.</h1>", status_code=404)
+
+@app.get("/api/scan-wifi")
+async def scan_wifi_networks():
+    # 주변의 Wi-Fi 네트워크를 스캔하여 목록 반환
+    log.info("[AP_API] Scanning for Wi-Fi networks...")
+    try:
+        # iwlist 명령어를 사용하여 Wi-Fi를 스캔합니다.
+        scan_output = subprocess.check_output(
+            ['sudo', 'iwlist', 'wlan0', 'scan']
+        ).decode('utf-8')
+        
+        ssids = set()
+        for line in scan_output.split('\n'):
+            if "ESSID:" in line:
+                ssid = line.split('"')[1]
+                if ssid: # 비어있지 않은 이름만 추가
+                    ssids.add(ssid)
+
+        log.info(f"Found networks: {list(ssids)}")
+        return {"networks": sorted(list(ssids))}
+    
+    except Exception as e:
+        log.error(f"Wi-Fi scan failed: {e}")
+        return {"error": "Failed to scan networks."}
+    
+@app.post("/api/save-wifi")
+async def save_wifi_credentials(credentials: dict):
+    # 사용자가 입력한 Wi-Fi 정보를 wpa_supplicant.conf 파일에 저장
+    ssid = credentials.get("ssid")
+    password = credentials.get("password")
+
+    if not ssid or not password:
+        raise HTTPException(status_code=400, detail="SSID and password are required.")
+
+    log.info(f"[AP_API] Received new Wi-Fi credentials for SSID: {ssid}")
+    
+    # wpa_supplicant.conf 파일에 쓸 내용 생성
+    network_config = f'''
+        network={{
+        ssid="{ssid}"
+        psk="{password}"
+        }}
+    '''
+
+    try:
+        # 기존 파일에 내용을 추가(append)합니다.
+        with open("/etc/wpa_supplicant/wpa_supplicant.conf", "a") as f:
+            f.write(network_config)
+        
+        log.info("Wi-Fi credentials saved. Rebooting device in 5 seconds...")
+        
+        # 재부팅을 별도 스레드에서 실행하여 응답을 먼저 보냄
+        def reboot_device():
+            time.sleep(5)
+            subprocess.run(["sudo", "reboot"])
+
+        threading.Thread(target=reboot_device).start()
+        
+        return {"status": "success", "message": "Credentials saved. Device will reboot."}
+    except Exception as e:
+        log.error(f"Failed to save Wi-Fi credentials: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save credentials.")
+
+if __name__ == "__main__":
+    # 이 파일이 'python api.py --ap-mode' 와 같이 직접 실행되었을 때의 로직
+    import sys
+    
+    # 꼬리표로 '--ap-mode'가 붙어있는지 확인
+    if "--ap-mode" in sys.argv:
+        # AP 모드일 때는 하드웨어나 다른 기능이 필요 없으므로 None을 전달
+        run_api_server(None, None, None, ap_mode=True)

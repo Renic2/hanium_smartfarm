@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smartfarm Wi-Fi Setup</title>
+    <style>
+        body { font-family: sans-serif; max-width: 400px; margin: 2em auto; padding: 1em; border: 1px solid #ccc; border-radius: 8px; }
+        label { display: block; margin-top: 1em; }
+        input, select, button { width: 100%; padding: 0.5em; margin-top: 0.5em; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        #message { margin-top: 1em; padding: 1em; border-radius: 4px; display: none; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>스마트팜 Wi-Fi 설정</h1>
+    <p>연결할 Wi-Fi를 선택하고 비밀번호를 입력하세요.</p>
+    
+    <div>
+        <label for="ssid-select">Wi-Fi 네트워크:</label>
+        <select id="ssid-select" name="ssid">
+            <option value="">-- 와이파이 목록 --</option>
+        </select>
+        <button id="scan-btn" type="button">다시 스캔</button>
+    </div>
+
+    <div>
+        <label for="password">비밀번호:</label>
+        <input type="password" id="password" name="password">
+    </div>
+
+    <button id="save-btn" type="button">저장 및 재부팅</button>
+
+    <div id="message"></div>
+
+    <script>
+        const ssidSelect = document.getElementById('ssid-select');
+        const passwordInput = document.getElementById('password');
+        const scanBtn = document.getElementById('scan-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const messageDiv = document.getElementById('message');
+
+        async function scanWifi() {
+            messageDiv.style.display = 'none';
+            scanBtn.textContent = '스캔 중...';
+            scanBtn.disabled = true;
+            try {
+                const response = await fetch('/api/scan-wifi');
+                const data = await fetch('/api/scan-wifi').then(res => res.json());
+
+                ssidSelect.innerHTML = '<option value="">-- 와이파이 목록 --</option>'; // 목록 초기화
+                data.networks.forEach(ssid => {
+                    const option = document.createElement('option');
+                    option.value = ssid;
+                    option.textContent = ssid;
+                    ssidSelect.appendChild(option);
+                });
+            } catch (error) {
+                showMessage('Wi-Fi 스캔에 실패했습니다.', 'error');
+            } finally {
+                scanBtn.textContent = '다시 스캔';
+                scanBtn.disabled = false;
+            }
+        }
+
+        async function saveWifi() {
+            const ssid = ssidSelect.value;
+            const password = passwordInput.value;
+
+            if (!ssid || !password) {
+                showMessage('Wi-Fi를 선택하고 비밀번호를 입력해주세요.', 'error');
+                return;
+            }
+            
+            saveBtn.textContent = '저장 중...';
+            saveBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/save-wifi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ssid, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('성공! 5초 후 기기가 재부팅됩니다. 새로운 Wi-Fi에 연결되었는지 확인하세요.', 'success');
+                } else {
+                    throw new Error(data.detail || '저장에 실패했습니다.');
+                }
+            } catch (error) {
+                showMessage(error.message, 'error');
+                saveBtn.textContent = '저장 및 재부팅';
+                saveBtn.disabled = false;
+            }
+        }
+
+        function showMessage(msg, type) {
+            messageDiv.textContent = msg;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+        }
+
+        scanBtn.addEventListener('click', scanWifi);
+        saveBtn.addEventListener('click', saveWifi);
+
+        // 페이지 로드 시 바로 스캔 시작
+        scanWifi();
+    </script>
+</body>
+</html>
