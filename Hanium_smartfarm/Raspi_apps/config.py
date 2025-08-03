@@ -27,7 +27,7 @@ API_SECRET_KEY = "HANIUMA20K197WS3STECH21SAFE75E9O" # 임시 키, 변경 가능
 
 # AWS 설정
 AWS_REGION = "ap-northeast-2" # AWS 리전
-AWS_S3_BUCKET = "receivedphotohanium2025smartfarm" # S3 버킷 이름
+AWS_S3_BUCKET_NAME = "receivedphotohanium2025smartfarm" # S3 버킷 이름
 
 # LOGGING 설정
 LOG_DIRECTORY = "logs" # 로그 파일 저장 디렉토리
