@@ -18,7 +18,7 @@ class CameraHandler:
 
         # 사용자의 홈 디텍토리 경로를 찾아 카메라 실행 파일의 절대 경로 탐색
         home_dir = os.path.expanduser("~")
-        self.cameraa_command_path = os.path.join(home_dir, "rpicam-apps/build/apps/rpicam-still")
+        self.camera_command_path = os.path.join(home_dir, "rpicam-apps/build/apps/rpicam-still")
 
     def capture_and_upload(self):
         # 사진 촬영을 위한 조명 제어, CLI 카메라 촬영 호 S3에 업로드
