@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 
 # 전역 변수
-sensor_data = {
+sensor_data = {    
     "TEMP": 0.0, "SOIL": 0.0, "HUMID": 0.0, "LIGHT": 0.0
 }
 
