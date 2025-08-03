@@ -42,7 +42,7 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 가상환경의 파이썬 실행 파일 경로
-    python_executable = f"/home/{os.getlogin()}/venv-libcamera/bin/python"
+    python_executable = f"/home/hanium/venv-libcamera/bin/python"
 
     if not check_internet_connection():
         # 인터넷 연결 실패: AP 모드 시작 
