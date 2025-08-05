@@ -11,10 +11,10 @@ void CareFarm::initialize() {
     Wire.begin();
     dht.begin();
     lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE);
-    
+
+    // 센서 핀 모드 설정
     pinMode(SOIL_MOISTURE_PIN, INPUT);
-    pinMode(DHT_PIN, INPUT);
-     
+
     // 액추에이터 핀 모드 설정
     pinMode(THERMAL_PAD_PIN, OUTPUT);
     pinMode(COOLING_FAN_PIN, OUTPUT);

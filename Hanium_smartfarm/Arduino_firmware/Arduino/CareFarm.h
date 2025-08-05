@@ -24,8 +24,6 @@ public:
 private:
     // --- 핀 번호 정의 ---
     const int SOIL_MOISTURE_PIN = A0;
-    const int LIGHT_SENSOR_SDA = A4;
-    const int LIGHT_SENSOR_SCL = A5;
     const int DHT_PIN = 2;
     const int COOLING_FAN_PIN = 3;
     const int WATER_PUMP_PIN = 4;

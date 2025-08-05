@@ -59,6 +59,7 @@ void initializeSensors()
   Wire.begin();
   dht.begin();
   lightMeter.begin();
+  pinMode(SOIL_MOISTURE_PIN, INPUT);
 }
 
 // 액추에이터 초기화 함수
