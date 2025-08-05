@@ -11,6 +11,9 @@ import threading
 import time
 import json
 import subprocess
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi.responses import HTMLResponse
 
 from util import log
@@ -18,6 +21,34 @@ import config
 from system_state import SystemState
 from hardware_control import HardwareController
 from camera_handler import CameraHandler
+
+# --- Lifespan Manager (백그라운드 작업 관리) ---
+# [수정됨] 기존 threading 방식 대신 FastAPI의 lifespan 이벤트를 사용하여 백그라운드 작업을 관리합니다.
+# 이는 더 효율적이고 안정적인 방법입니다.
+async def broadcast_loop():
+    """ 일정 주기로 모든 WebSocket 클라이언트에게 상태를 브로드캐스트하는 비동기 루프. """
+    while True:
+        if system_state:
+            state_data = system_state.get_full_state()
+            await connection_manager.broadcast_state(state_data)
+        await asyncio.sleep(2) # 비동기 sleep 사용
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 서버 시작 시
+    log.info("Starting background broadcast task...")
+    # AP 모드가 아닐 때만 백그라운드 브로드캐스트 루프 시작
+    if not app.state.ap_mode:
+        task = asyncio.create_task(broadcast_loop())
+    yield
+    # 서버 종료 시
+    if not app.state.ap_mode:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            log.info("Background broadcast task cancelled.")
+
 
 class ConnectionManager:
     # 활성화된 WebSocket 연결을 관리하는 클래스
@@ -37,14 +68,16 @@ class ConnectionManager:
         # 모든 연결된 클라이언트에게 현재 상태를 브로드캐스트합니다.
         # datetime 객체는 JSON으로 바로 변환되지 않으므로 문자열로 변환
         if state.get('last_updated'):
-             state['last_updated'] = state['last_updated'].isoformat()
-             
+            # get_full_state에서 이미 isoformat으로 변환하므로 이 부분은 필요 없을 수 있으나 안전을 위해 유지
+            if not isinstance(state['last_updated'], str):
+                 state['last_updated'] = state['last_updated'].isoformat()
+
         message = json.dumps(state)
         for connection in self.activate_connections:
             await connection.send_text(message)
 
-# FastAPI 앱 생성
-app = FastAPI()
+# FastAPI 앱 생성 (lifespan 관리자 등록)
+app = FastAPI(lifespan=lifespan)
 
 # CORS 미들웨어 설정 (다른 출처의 요청 허용)
 app.add_middleware(
@@ -56,7 +89,6 @@ app.add_middleware(
 )
 
 # 전역 변수 (main.py에서 주입받을 예정)
-# 이 변수들은 main.py에서 실제 객체로 초기화됩니다.
 system_state: SystemState = None
 hardware_controller: HardwareController = None
 camera_handler = None
@@ -64,7 +96,6 @@ connection_manager = ConnectionManager()
 
 # API 인증
 async def verify_api_key(x_api_key: str = Header(..., alias="X-API-KEY")):
-    # API 키를 검증하는 의존성 함수.
     if x_api_key != config.API_SECRET_KEY:
         log.warning(f"Invalid API Key received: {x_api_key}")
         raise HTTPException(status_code=401, detail="Invalid API Key")
@@ -73,12 +104,10 @@ async def verify_api_key(x_api_key: str = Header(..., alias="X-API-KEY")):
 # REST API 엔드포인트
 @app.get("/api/state", dependencies=[Depends(verify_api_key)])
 async def get_current_state():
-    # 시스템의 전체 현재 상태를 반환합니다.
     return system_state.get_full_state()
 
 @app.post("/api/control", dependencies=[Depends(verify_api_key)])
 async def control_actuator(command: dict):
-    # 수동으로 장치를 제어합니다. 예: {"device": "FAN", "value": 255}
     device = command.get("device")
     value = command.get("value")
     if device and value is not None:
@@ -89,17 +118,14 @@ async def control_actuator(command: dict):
 
 @app.post("/api/setpoints", dependencies=[Depends(verify_api_key)])
 async def set_new_targets(targets: dict):
-    # 새로운 자동 제어 목표값을 설정합니다. 예: {"TARGET_TEMP": 26.5}
     log.info(f"[API] Setpoints update received: {targets}")
     system_state.update_targets(targets)
     return {"status": "success", "updated_targets": system_state.get_full_state()['targets']}
 
 @app.post("/api/camera/capture", dependencies=[Depends(verify_api_key)])
 async def trigger_capture():
-    # 사진 촬영 및 업로드 시퀀스를 시작시킵니다.
     if camera_handler:
         log.info("[API] Capture sequence initiated by user.")
-        # 촬영은 시간이 걸릴 수 있으므로 백그라운드 스레드에서 실행
         threading.Thread(target=camera_handler.capture_and_upload).start()
         return {"status": "success", "message": "Capture sequence initiated."}
     raise HTTPException(status_code=503, detail="Camera handler not available.")
@@ -107,38 +133,26 @@ async def trigger_capture():
 # WebSocket 엔드포인트
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    # 실시간 데이터 전송을 위한 WebSocket 연결.
     await connection_manager.connect(websocket)
     try:
         while True:
-            # 클라이언트로부터 메시지를 받을 수도 있지만, 현재는 서버->클라이언트 단방향 전송만 구현
             await websocket.receive_text()
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
 
-# 백그라운드 작업
-def broadcast_loop():
-    # 일정 주기로 모든 WebSocket 클라이언트에게 상태를 브로드캐스트하는 루프.
-    while True:
-        # main.py에서 system_state가 초기화된 후에 루프 시작
-        if system_state:
-            state_data = system_state.get_full_state()
-            # 비동기 함수를 동기 코드에서 실행하기 위한 트릭
-            import asyncio
-            asyncio.run(connection_manager.broadcast_state(state_data))
-        time.sleep(2) # 2초마다 상태 전송
+# [삭제됨] 기존 broadcast_loop 함수는 lifespan 관리자로 대체되었습니다.
 
 # --- 서버 실행 함수 ---
 def run_api_server(state_instance, hardware_instance, camera_instance, ap_mode=False):
-    # main.py에서 이 함수를 호출하여 API 서버를 실행합니다.
     global system_state, hardware_controller, camera_handler
     system_state = state_instance
     hardware_controller = hardware_instance
     camera_handler = camera_instance
     
-    # AP 모드가 아닐시 백그라운드에서 WebSocket 브로드캐스트 루프 시작
-    if not ap_mode:
-        threading.Thread(target=broadcast_loop, daemon=True).start()
+    # [수정됨] app.state를 통해 ap_mode 여부를 lifespan 관리자에게 전달
+    app.state.ap_mode = ap_mode
+    
+    # [삭제됨] threading.Thread 호출은 lifespan으로 대체되었습니다.
     
     host_ip = "0.0.0.0"
 
@@ -148,7 +162,6 @@ def run_api_server(state_instance, hardware_instance, camera_instance, ap_mode=F
 # AP 모드 전용 엔드포인트
 @app.get("/", response_class=HTMLResponse)
 async def serve_setup_page():
-    # Wi-Fi 설정용 기본 HTML 페이지를 보여줌
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=200)
@@ -157,10 +170,8 @@ async def serve_setup_page():
 
 @app.get("/api/scan-wifi")
 async def scan_wifi_networks():
-    # 주변의 Wi-Fi 네트워크를 스캔하여 목록 반환
     log.info("[AP_API] Scanning for Wi-Fi networks...")
     try:
-        # iwlist 명령어를 사용하여 Wi-Fi를 스캔합니다.
         scan_output = subprocess.check_output(
             ['sudo', 'iwlist', 'wlan0', 'scan']
         ).decode('utf-8')
@@ -169,7 +180,7 @@ async def scan_wifi_networks():
         for line in scan_output.split('\n'):
             if "ESSID:" in line:
                 ssid = line.split('"')[1]
-                if ssid: # 비어있지 않은 이름만 추가
+                if ssid:
                     ssids.add(ssid)
 
         log.info(f"Found networks: {list(ssids)}")
@@ -181,7 +192,6 @@ async def scan_wifi_networks():
     
 @app.post("/api/save-wifi")
 async def save_wifi_credentials(credentials: dict):
-    # 사용자가 입력한 Wi-Fi 정보를 wpa_supplicant.conf 파일에 저장
     ssid = credentials.get("ssid")
     password = credentials.get("password")
 
@@ -190,7 +200,6 @@ async def save_wifi_credentials(credentials: dict):
 
     log.info(f"[AP_API] Received new Wi-Fi credentials for SSID: {ssid}")
     
-    # wpa_supplicant.conf 파일에 쓸 내용 생성
     network_config = f'''
         network={{
         ssid="{ssid}"
@@ -199,13 +208,11 @@ async def save_wifi_credentials(credentials: dict):
     '''
 
     try:
-        # 기존 파일에 내용을 추가(append)합니다.
         with open("/etc/wpa_supplicant/wpa_supplicant.conf", "a") as f:
             f.write(network_config)
         
         log.info("Wi-Fi credentials saved. Rebooting device in 5 seconds...")
         
-        # 재부팅을 별도 스레드에서 실행하여 응답을 먼저 보냄
         def reboot_device():
             time.sleep(5)
             subprocess.run(["sudo", "reboot"])
@@ -218,10 +225,6 @@ async def save_wifi_credentials(credentials: dict):
         raise HTTPException(status_code=500, detail="Failed to save credentials.")
 
 if __name__ == "__main__":
-    # 이 파일이 'python api.py --ap-mode' 와 같이 직접 실행되었을 때의 로직
     import sys
-    
-    # 꼬리표로 '--ap-mode'가 붙어있는지 확인
     if "--ap-mode" in sys.argv:
-        # AP 모드일 때는 하드웨어나 다른 기능이 필요 없으므로 None을 전달
         run_api_server(None, None, None, ap_mode=True)
