@@ -10,7 +10,6 @@ import os
 from datetime import datetime
 import config
 from util import log
-from camera_handler import CameraHandler
 
 class SystemState:
     # 시스템의 현재 상태와 설정을 관리하는 스레드-안전 클래스
