@@ -46,7 +46,7 @@ class SystemState:
         # 센서 데이터 업데이트
         with self.lock:
             self.sensors.update(sensor_data)
-            self.last_updated = datetime.now
+            self.last_updated = datetime.now()
 
     def update_actuator_state(self, device: str, value: int):
         with self.lock:
