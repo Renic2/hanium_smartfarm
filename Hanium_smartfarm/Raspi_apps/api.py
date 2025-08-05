@@ -30,7 +30,7 @@ class ConnectionManager:
         log.info("WebSocket client connected.")
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        self.activate_connections.remove(websocket)
         log.info("WebSocket client disconnected.")
 
     async def broadcast_state(self, state: dict):
@@ -40,7 +40,7 @@ class ConnectionManager:
              state['last_updated'] = state['last_updated'].isoformat()
              
         message = json.dumps(state)
-        for connection in self.active_connections:
+        for connection in self.activate_connections:
             await connection.send_text(message)
 
 # FastAPI 앱 생성

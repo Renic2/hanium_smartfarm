@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 import config
 from util import log
+from camera_handler import CameraHandler
 
 class SystemState:
     # 시스템의 현재 상태와 설정을 관리하는 스레드-안전 클래스
@@ -70,18 +71,33 @@ class SystemState:
                 log.warning(f"Attempted to update unknown actuator: {device}")
     
     def update_targets(self, new_targets: dict):
-        # 프론트엔드에서 받은 새 목표값 업데이트, 저장
+    # 프론트엔드에서 받은 새 목표값 및 모드 업데이트, 저장
         with self.lock:
-            for key, value, in new_targets.items():
-                if key in self.targets:
+        # 플래그를 두어 파일 저장은 목표값이 변경될 때만 수행
+            targets_changed = False
+            for key, value in new_targets.items():
+            # 1. 'mode' 키가 들어온 경우, self.mode를 직접 변경
+                if key == "mode":
+                    if value in ["AUTO", "MANUAL"]:
+                        self.mode = value
+                        log.info(f"System mode changed to: {self.mode}")
+                    else:
+                        log.warning(f"Invalid mode value received: {value}")
+            
+            # 2. 기존 목표값(온도, 습도 등) 키가 들어온 경우, self.targets를 변경
+                elif key in self.targets:
                     try:
-                        self.targets[key] = float[value]
-                    
+                    # float[value] -> float(value) 오타 수정
+                        self.targets[key] = float(value)
+                        targets_changed = True # 목표값이 변경되었음을 표시
+                
                     except (ValueError, TypeError):
                         log.warning(f"Invalid value for target '{key}'. Must be a number. Value: {value}")
-            
-            log.info(f"Targets updated: {self.targets}")
-            self.save_targets_to_file()
+        
+        # 목표값이 실제로 변경되었을 때만 파일에 저장
+            if targets_changed:
+                log.info(f"Targets updated: {self.targets}")
+                self.save_targets_to_file()
 
     def get_full_state(self) -> dict:
         # 시스템의 현재 상태를 안전하게 복사하여 반환.
