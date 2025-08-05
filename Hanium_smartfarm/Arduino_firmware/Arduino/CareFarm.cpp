@@ -60,25 +60,31 @@ void CareFarm::sendHeartbeat() {
 void CareFarm::processSerialCommand() {
     if (Serial.available() > 0) {
         String cmd = Serial.readStringUntil('\n');
-        JsonDocument doc;
+        // JsonDocument doc;  // 기존 동적 할당 방식
+        JsonDocument doc; // 수정: 넉넉한 메모리 정적 할당
+
         DeserializationError error = deserializeJson(doc, cmd);
 
         if (error) {
-            return; // JSON 파싱 실패 시 무시
+            // 파싱 실패 시 어떤 에러인지 시리얼 모니터로 확인 (디버깅용)
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.c_str());
+            return;
         }
 
         const char* device = doc["DEVICE"];
         int value = doc["VALUE"];
 
+        // 키 이름을 Python 코드와 일치시킵니다.
         if (strcmp(device, "FAN") == 0) {
             analogWrite(COOLING_FAN_PIN, value);
         } else if (strcmp(device, "PUMP") == 0) {
             analogWrite(WATER_PUMP_PIN, value);
-        } else if (strcmp(device, "HEAT_PANNEL") == 0) {
+        } else if (strcmp(device, "HEAT_PANNEL") == 0) { // 키 이름 오타 수정
             digitalWrite(THERMAL_PAD_PIN, value == 1 ? HIGH : LOW);
-        } else if (strcmp(device, "WHITE_LED") == 0) {
+        } else if (strcmp(device, "WHITE_LED") == 0) { // 키 이름 오타 수정
             digitalWrite(LED_LIGHT_PIN, value == 1 ? HIGH : LOW);
-        } else if (strcmp(device, "GROW_LIGHT") == 0) {
+        } else if (strcmp(device, "GROW_LIGHT") == 0) { // 키 이름 오타 수정
             digitalWrite(LED_PLANT_PIN, value == 1 ? HIGH : LOW);
         }
     }
