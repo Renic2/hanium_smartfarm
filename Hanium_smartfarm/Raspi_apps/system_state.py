@@ -23,7 +23,7 @@ class SystemState:
         
         # FAN, PUMP는 PWM 제어 (0 ~ 255)
         self.actuators = {"FAN": 0, "PUMP": 0,
-                          "GROW_LIGHT": 0,
+                          "GROW_LIGHT": 1,
                           "WHITE_LED": 0,
                           "HEAT_PANNEL": 0}
         
