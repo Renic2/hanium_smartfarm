@@ -29,7 +29,7 @@ class CameraHandler:
         self.hardware.send_command("WHITE_LED", 1)
 
         # 파일 이름 생성 (예: 20250803_123000.jpg)
-        timestamp = datetime.now.strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}.jpg"
         # /tmp 디렉토리는 재부팅 시 내용이 사라지는 임시 저장 공간으로 적합합니다.
         local_filepath = f"/tmp/{filename}" 
