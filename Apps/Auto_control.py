@@ -21,7 +21,7 @@ class AutoController:
         self.state = state
         self.hardware = hardware
 
-        self.data = SystemState._read_json()
+        self.data = SystemState.get_all_data()
 
         # PID 제어기 쵝화
         self.pid = PID(Config.PID_KP, Config.PID_KI, Config.PID_KD, self.data["TARGET"]["TARGET_TEMP"])
@@ -33,7 +33,7 @@ class AutoController:
         while not self.stop_event.is_set():
             try:
                 # 현재 상태와 목표값 가져오기
-                self.data = SystemState._read_json()
+                self.data = SystemState.get_all_data()
                 self.sensors = self.data["SENSOR"]
                 self.targets = self.data["TARGET"]
 
