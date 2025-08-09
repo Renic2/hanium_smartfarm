@@ -1,0 +1,24 @@
+{
+    "TARGET" : {
+        "TARGET_TEMP" : 20.0,
+        "TARGET_SOIL_MOISTURE" : 400.0
+    },
+
+    "SENSOR" : {
+        "TEMP" : 0.0, 
+        "HUMID" : 0.0,
+        "SOIL" : 0.0, 
+        "LIGHT" : 0.0
+    },
+
+    "ACTUATOR" : { 
+        "FAN" : 0,
+        "PUMP" : 0,
+        "HEAT_PANNEL": 0,
+        "GROW_LIGHT" : 1,
+        "WHITE_LED" : 0
+    },
+
+    "MODE" : "AUTO",
+    "PLANT_CONDITION": "NORMAL"
+}
