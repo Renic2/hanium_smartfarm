@@ -21,7 +21,7 @@ class AutoController:
         self.state = state
         self.hardware = hardware
 
-        self.data = SystemState.get_all_data()
+        self.data = self.state.get_all_data()
 
         # PID 제어기 쵝화
         self.pid = PID(Config.PID_KP, Config.PID_KI, Config.PID_KD, self.data["TARGET"]["TARGET_TEMP"])
@@ -33,7 +33,7 @@ class AutoController:
         while not self.stop_event.is_set():
             try:
                 # 현재 상태와 목표값 가져오기
-                self.data = SystemState.get_all_data()
+                self.data = self.state.get_all_data()
                 self.sensors = self.data["SENSOR"]
                 self.targets = self.data["TARGET"]
 
@@ -66,7 +66,7 @@ class AutoController:
                     time.sleep(2)
                     self.data["ACTUATOR"]["PUMP"] = 0
 
-                SystemState._write_json(self.data)
+                self.state._write_state(self.data)
 
             except Exception as e:
                 log.error(f"[자동 제어] 자동 제어 중 에러가 발생하였습니다: {e}")
