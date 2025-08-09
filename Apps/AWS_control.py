@@ -22,7 +22,7 @@ class AWSHandler:
     def __init__ (self, state: SystemState):
         self.state = state
         self.s3_client = boto3.client('s3', region_name=Config.AWS_REGION)
-        self.data = SystemState._read_json()
+        self.data = self.state.get_all_data()
 
         #MQTT 클랄이언트 설정
         self.mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="smartfarm-pi-hanium")
