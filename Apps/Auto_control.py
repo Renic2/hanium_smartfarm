@@ -20,7 +20,6 @@ class AutoController:
     def __init__ (self, state: SystemState, hardware: HardwareController):
         self.state = state
         self.hardware = hardware
-
         self.data = self.state.get_all_data()
 
         # PID 제어기 쵝화
