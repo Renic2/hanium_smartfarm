@@ -17,9 +17,10 @@ class CareFarm {
 public:
     CareFarm(); // 생성자
     void initialize(); // 초기화 함수 통합
+    SensorData readSensors();
     void readAndSendSensors(); // 센서 읽고 JSON으로 전송
     void sendHeartbeat(); // Heartbeat 전송
-    void processSerialCommand(); // 시리얼 명령 수신 및 처리
+    void processSerialCommand(String cmd); // 시리얼 명령 수신 및 처리
 
 private:
     // --- 핀 번호 정의 ---

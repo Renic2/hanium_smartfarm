@@ -30,62 +30,96 @@ void CareFarm::initialize() {
     digitalWrite(LED_PLANT_PIN, LOW);
 }
 
-// 센서 값을 읽어 JSON으로 시리얼 전송
-void CareFarm::readAndSendSensors() {
-    JsonDocument doc; // ArduinoJson 7.x 버전 기준
+// 센서 데이터 읽기 함수
+SensorData CareFarm::readSensors(){
+  SensorData data;
 
-    doc["temp"] = dht.readTemperature();
-    doc["humid"] = dht.readHumidity();
-    doc["soil"] = analogRead(SOIL_MOISTURE_PIN);
-    doc["light"] = lightMeter.readLightLevel();
+  data.temperature = dht.readTemperature();
+  data.humidity = dht.readHumidity();
+  data.soilMoisture = analogRead(SOIL_MOISTURE_PIN);
+  data.lightLevel = lightMeter.readLightLevel();
 
-    // NaN 값 체크 (센서 읽기 실패 시)
-    if (isnan(doc["temp"].as<float>()) || isnan(doc["humid"].as<float>())) {
-        return; // 읽기 실패 시 전송 안 함
-    }
+  // 센서 데이터값 시리얼 전송
+  // 보내는 포맷 - sensor:(TEMP),(SOIL),(HUMID),(LIGHT)
+  // 예시 포맷 - sensor:25.5,300,45,1000
+  Serial.print("SENSOR:");
+  Serial.print(data.temperature);
+  Serial.print(",");
+  Serial.print(data.soilMoisture);
+  Serial.print(",");
+  Serial.print(data.humidity);
+  Serial.print(",");
+  Serial.println(data.lightLevel);
 
-    serializeJson(doc, Serial);
-    Serial.println();
+  return data;
 }
 
 // Heartbeat 신호 전송
 void CareFarm::sendHeartbeat() {
     JsonDocument doc;
-    doc["TYPE"] = "HEARTBEAT";
+    doc["TYPE"] = "HEARTBEAT:";
     serializeJson(doc, Serial);
     Serial.println();
 }
 
-// 라즈베리파이로부터 받은 JSON 명령 처리
-void CareFarm::processSerialCommand() {
-    if (Serial.available() > 0) {
-        String cmd = Serial.readStringUntil('\n');
-        // JsonDocument doc;  // 기존 동적 할당 방식
-        JsonDocument doc; // 수정: 넉넉한 메모리 정적 할당
+// 라즈베리파이로부터 받은 명령 처리
+void CareFarm::processSerialCommand(String cmd){
+  cmd.trim();
+  char buf[32];
+  cmd.toCharArray(buf, sizeof(buf)); // 문자열을 char 배열로 변환
 
-        DeserializationError error = deserializeJson(doc, cmd);
+  char *token = strtok(buf, ","); // strtok으로 분리
+  int FAN_SPEED = atoi(token);    // 첫 번째 토큰을 정수로 변환
+  if (FAN_SPEED > 0)
+  {
+    analogWrite(COOLING_FAN_PIN, FAN_SPEED); // 팬 속도 설정
+  }
+  else
+  {
+    digitalWrite(COOLING_FAN_PIN, LOW); // 팬 끄기
+  }
 
-        if (error) {
-            // 파싱 실패 시 어떤 에러인지 시리얼 모니터로 확인 (디버깅용)
-            Serial.print(F("deserializeJson() failed: "));
-            Serial.println(error.c_str());
-            return;
-        }
+  token = strtok(NULL, ",");    // 다음 토큰으로 이동
+  int PUMP_SPEED = atoi(token); // 두 번째 토큰을 정수로 변환
+  if (PUMP_SPEED > 0)
+  {
+    analogWrite(WATER_PUMP_PIN, PUMP_SPEED); // 펌프 속도 설정
+  }
+  else
+  {
+    digitalWrite(WATER_PUMP_PIN, LOW); // 펌프 끄기
+  }
 
-        const char* device = doc["DEVICE"];
-        int value = doc["VALUE"];
+  token = strtok(NULL, ",");         // 다음 토큰으로 이동
+  int LED_PLANT_STATE = atoi(token); // 세 번째 토큰을 정수로 변환
+  if (LED_PLANT_STATE == 1)
+  {
+    digitalWrite(LED_PLANT_PIN, HIGH); // 식물 LED 켜기
+  }
+  else
+  {
+    digitalWrite(LED_PLANT_PIN, LOW); // 식물 LED 끄기
+  }
 
-        // 키 이름을 Python 코드와 일치시킵니다.
-        if (strcmp(device, "FAN") == 0) {
-            analogWrite(COOLING_FAN_PIN, value);
-        } else if (strcmp(device, "PUMP") == 0) {
-            analogWrite(WATER_PUMP_PIN, value);
-        } else if (strcmp(device, "HEAT_PANNEL") == 0) { // 키 이름 오타 수정
-            digitalWrite(THERMAL_PAD_PIN, value == 1 ? HIGH : LOW);
-        } else if (strcmp(device, "WHITE_LED") == 0) { // 키 이름 오타 수정
-            digitalWrite(LED_LIGHT_PIN, value == 1 ? HIGH : LOW);
-        } else if (strcmp(device, "GROW_LIGHT") == 0) { // 키 이름 오타 수정
-            digitalWrite(LED_PLANT_PIN, value == 1 ? HIGH : LOW);
-        }
-    }
+  token = strtok(NULL, ",");         // 다음 토큰으로 이동
+  int LED_LIGHT_STATE = atoi(token); // 네 번째 토큰을 정수로 변환
+  if (LED_LIGHT_STATE == 1)
+  {
+    digitalWrite(LED_LIGHT_PIN, HIGH); // 조명 LED 켜기
+  }
+  else
+  {
+    digitalWrite(LED_LIGHT_PIN, LOW); // 조명 LED 끄기
+  }
+
+  token = strtok(NULL, ",");           // 다음 토큰으로 이동
+  int THERMAL_PAD_STATE = atoi(token); // 다섯 번째 토큰을 정수로 변환
+  if (THERMAL_PAD_STATE == 1)
+  {
+    digitalWrite(THERMAL_PAD_PIN, HIGH); // 열 패드 켜기
+  }
+  else
+  {
+    digitalWrite(THERMAL_PAD_PIN, LOW); // 열 패드 끄기
+  }
 }
