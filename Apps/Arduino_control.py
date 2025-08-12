@@ -1,11 +1,12 @@
 # =================================================================================
-# Arduino_control.py (JSON 통신 수정본)
+# Arduino_control.py (텍스트 파싱 최종본)
+# 아두이노와의 시리얼 통신, 센서/액추에이터 제어 송수신
 # =================================================================================
 import serial
 import serial.tools.list_ports
 import threading
 import time
-import json
+import json # JSON 형식은 아니지만, 혹시 모를 로깅을 위해 유지
 
 from Utility import log
 import Config
@@ -19,6 +20,7 @@ class HardwareController:
         self.stop_event = threading.Event()
         self.reconnect_event = threading.Event()
 
+    # ... (_find_serial_port, connect, trigger_reconnect, start, stop 메서드는 이전과 동일) ...
     def _find_serial_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
@@ -45,9 +47,9 @@ class HardwareController:
             log.warning(f"{Config.RECONNECT_DELAY}초 후 재연결을 시도합니다.")
             time.sleep(Config.RECONNECT_DELAY)
         return False
-    
+
     def _read_thread_worker(self):
-        """(스레드 1) 아두이노로부터 JSON 데이터를 읽고 상태를 처리합니다."""
+        """(스레드 1) 아두이노로부터 텍스트 데이터를 읽고 상태를 처리합니다."""
         while not self.stop_event.is_set():
             if self.reconnect_event.is_set():
                 time.sleep(1)
@@ -59,55 +61,52 @@ class HardwareController:
                     if not line:
                         continue
                     
-                    # ★★★ 핵심 수정 1: 수신한 데이터를 JSON으로 파싱 ★★★
-                    data = json.loads(line)
-                    data_type = data.get("TYPE")
+                    # ★★★ 핵심 수정 1: 텍스트 형식 파싱 ★★★
+                    if line.startswith("SENSOR:"):
+                        data_part = line[7:]  # "SENSOR:" 부분 제거
+                        items = data_part.split(',')
+                        
+                        if len(items) == 4:
+                            current_state = self.state.get_all_data()
+                            # 아두이노가 보내는 순서: TEMP, SOIL, HUMID, LIGHT
+                            current_state["SENSOR"]["TEMP"] = float(items[0])
+                            current_state["SENSOR"]["SOIL"] = float(items[1])
+                            current_state["SENSOR"]["HUMID"] = float(items[2])
+                            current_state["SENSOR"]["LIGHT"] = float(items[3])
+                            
+                            self.state.write_state(current_state)
+                            log.debug(f"센서 값 수신 및 업데이트 완료: {current_state['SENSOR']}")
+                        else:
+                            log.warning(f"수신한 센서 데이터 형식이 올바르지 않습니다: {line}")
 
-                    if data_type == "SENSOR":
-                        # SENSOR 데이터를 value.json에 업데이트
-                        current_state = self.state.get_all_data()
-                        current_state["SENSOR"] = {
-                            "TEMP": data.get("TEMP"),
-                            "HUMID": data.get("HUMID"),
-                            "SOIL": data.get("SOIL"),
-                            "LIGHT": data.get("LIGHT")
-                        }
-                        self.state.write_state(current_state)
-                        log.debug(f"센서 값 수신 및 업데이트 완료: {current_state['SENSOR']}")
-
-                    elif data_type == "HEARTBEAT":
+                    elif line.startswith("HEARTBEAT:"):
                         self.last_heartbeat_time = time.time()
                         log.debug("HeartBeat 신호를 수신하였습니다.")
 
-                except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as e:
-                    log.warning(f"아두이노 데이터 처리 중 오류 발생: {e} | 원본 데이터: {line}")
+                except (UnicodeDecodeError, ValueError) as e:
+                    log.warning(f"시리얼 데이터 처리 중 오류 발생: {e} | 원본 데이터: {line}")
             
             time.sleep(0.1)
 
     def _write_thread_worker(self):
-        """(스레드 2) 주기적으로 최신 액추에이터 상태를 아두이노로 전송합니다."""
-        # ★★★ 핵심 수정 2: 제어 루프 추가 ★★★
+        """(스레드 2) 주기적으로 최신 액추에이터 상태를 텍스트로 아두이노에 전송합니다."""
         while not self.stop_event.is_set():
             if not self.reconnect_event.is_set() and self.ser and self.ser.is_open:
                 try:
                     actuator_data = self.state.get_all_data()["ACTUATOR"]
                     
-                    # 아두이노로 보낼 JSON 객체 생성
-                    command_to_send = {
-                        "DEVICE": "ALL", # 모든 장치 상태를 한번에 보낸다는 의미
-                        "VALUE": {
-                            "FAN": actuator_data.get("FAN", 0),
-                            "PUMP": actuator_data.get("PUMP", 0),
-                            "HEAT_PANNEL": actuator_data.get("HEAT_PANNEL", 0),
-                            "GROW_LIGHT": actuator_data.get("GROW_LIGHT", 0),
-                            "WHITE_LED": actuator_data.get("WHITE_LED", 0)
-                        }
-                    }
+                    # ★★★ 핵심 수정 2: 쉼표로 구분된 텍스트 형식으로 변경 ★★★
+                    cmd_list = [
+                        str(actuator_data.get("FAN", 0)),
+                        str(actuator_data.get("PUMP", 0)),
+                        str(actuator_data.get("HEAT_PANNEL", 0)),
+                        str(actuator_data.get("GROW_LIGHT", 0)),
+                        str(actuator_data.get("WHITE_LED", 0))
+                    ]
                     
-                    # JSON 문자열로 변환하여 전송
-                    cmd_str = json.dumps(command_to_send) + "\n"
+                    cmd_str = ','.join(cmd_list) + "\n"
                     self.ser.write(cmd_str.encode('utf-8'))
-                    log.debug(f"액추에이터 명령 전송: {command_to_send['VALUE']}")
+                    log.debug(f"액추에이터 명령 전송: {cmd_str.strip()}")
 
                 except Exception as e:
                     log.warning(f"[아두이노] 액추에이터 전송에 실패하였습니다: {e}")
@@ -124,7 +123,6 @@ class HardwareController:
             time.sleep(1)
 
     def trigger_reconnect(self):
-        """아두이노와의 재연결 과정을 시작합니다."""
         if self.reconnect_event.is_set():
             return
         
@@ -143,21 +141,16 @@ class HardwareController:
         reconnect_thread.start()
 
     def start(self):
-        """하드웨어 제어에 필요한 모든 스레드를 시작합니다."""
         log.info("하드웨어 컨트롤러를 시작합니다.")
-        
         if not self.connect():
             log.error("초기 연결에 실패하였습니다. 프로그램을 종료합니다.")
             return
-        
         threading.Thread(target=self._read_thread_worker, daemon=True).start()
         threading.Thread(target=self._write_thread_worker, daemon=True).start()
         threading.Thread(target=self._watchdog_thread, daemon=True).start()
-        
         log.info("하드웨어 컨트롤러의 모든 스레드가 실행 중입니다.")
 
     def stop(self):
-        """하드웨어 제어를 안전하게 종료합니다."""
         log.info("하드웨어 컨트롤러를 종료합니다.")
         self.stop_event.set()
         if self.ser and self.ser.is_open:
