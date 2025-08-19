@@ -44,8 +44,9 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
         with self.file_lock:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
+                log.info(f"데이터 입력.{data}")
             self.last_updated = datetime.now()
-            log.info(f"데이터 입력.")
+            
             
     #현재 설정 및 상태 데이터를 모두 읽어 반환
     def get_all_data(self):
