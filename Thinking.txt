@@ -1,0 +1,12 @@
+How to fix?
+
+1. json error -> cannot update frontend sensor
+2. AP MODE error -> SHIT ERROR, Disable MODE
+현재 많은 모듈로 인해 몇몇가지가 수행이 안되는 상황, 최소한의 모듈만 활성화하고 나머지는 천천히 활성화 하는 것으로 결정
+
+AP MODE, Wifi 탐색 제거
+
+변경해야 할 것, 프론트엔드 변경과 그에 따른 API 변경
+json으로 데이터 전송이 아닌 실시간 전송으로 변경
+
+ 

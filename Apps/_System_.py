@@ -15,7 +15,7 @@ from datetime import datetime
 from Utility import log
 
 class SystemState:  # 시스템의 현재 상태와 설정 관리
-    def __init__(self, filepath="value.json"):
+    def __init__(self, filepath="Value.json"):
         self.filepath = filepath
         self.file_lock = threading.Lock() # 파일에 여러 스레드가 접근하는 것을 방지
         self.last_updated = None
@@ -40,10 +40,12 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
 
     # json 파일에 정보 저장, lock의 유무에 따라 저장하므로 안전하게 저장됨
     def _write_state(self, data):
+        log.info(f"write 함수 호출.")
         with self.file_lock:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
             self.last_updated = datetime.now()
+            log.info(f"데이터 입력.")
             
     #현재 설정 및 상태 데이터를 모두 읽어 반환
     def get_all_data(self):
