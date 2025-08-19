@@ -42,7 +42,7 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
 
     # json 파일에 정보 저장, lock의 유무에 따라 저장하므로 안전하게 저장됨
     def _write_state(self, data):
-        file_name = "./Value/" + f"{self.global_value_count}" + ".json"
+        file_name = "Value/" + f"{self.global_value_count}" + ".json"
         log.info(f"write 함수 호출.")
         with self.file_lock:
             with open(file_name, "w", encoding="utf-8") as f:
