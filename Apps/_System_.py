@@ -20,6 +20,8 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
         self.file_lock = threading.Lock() # 파일에 여러 스레드가 접근하는 것을 방지
         self.last_updated = None
 
+        self.global_value_count = 0
+
         # json 파일 존재 유무 확인
         if not os.path.exists(self.filepath):
             self._initialize_json()
@@ -40,6 +42,7 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
 
     # json 파일에 정보 저장, lock의 유무에 따라 저장하므로 안전하게 저장됨
     def _write_state(self, data):
+        file_name = "./Value/" + f"{self.global_value_count}" + ".json"
         log.info(f"write 함수 호출.")
         with self.file_lock:
             with open(self.filepath, "w", encoding="utf-8") as f:
