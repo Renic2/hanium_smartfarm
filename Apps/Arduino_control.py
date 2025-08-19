@@ -74,7 +74,7 @@ class HardwareController:
                             current_state["SENSOR"]["HUMID"] = float(items[2])
                             current_state["SENSOR"]["LIGHT"] = float(items[3])
                             
-                            self.state._write_state(current_state)
+                            self.state.write_state(current_state)
                             log.debug(f"센서 값 수신 및 업데이트 완료: {current_state['SENSOR']}")
                         else:
                             log.warning(f"수신한 센서 데이터 형식이 올바르지 않습니다: {line}")
