@@ -45,7 +45,7 @@ class SystemState:  # 시스템의 현재 상태와 설정 관리
         file_name = "./Value/" + f"{self.global_value_count}" + ".json"
         log.info(f"write 함수 호출.")
         with self.file_lock:
-            with open(self.filepath, "w", encoding="utf-8") as f:
+            with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
                 log.info(f"데이터 입력.{data}")
             self.last_updated = datetime.now()
