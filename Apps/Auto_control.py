@@ -21,6 +21,7 @@ class AutoController:
         self.state = state
         self.hardware = hardware
         self.data = self.state.get_all_data()
+        self.pump_active = False
 
         # PID 제어기 쵝화
         self.pid = PID(Config.PID_KP, Config.PID_KI, Config.PID_KD, self.data["TARGET"]["TARGET_TEMP"])
@@ -62,11 +63,14 @@ class AutoController:
                 if float(self.sensors["SOIL"]) < float(self.targets["TARGET_SOIL_MOISTURE"]):
                     log.info("[제어] 토양 습도가 낮습니다. 펌프를 작동합니다.")
                     self.data["ACTUATOR"]["PUMP"] = 255
-                    time.sleep(2)
-                    log.info("[제어] 펌프를 제어 종료.")
-                    self.data["ACTUATOR"]["PUMP"] = 0
+                    self.pump_active = True
 
                 self.state._write_state(self.data)
+                if self.pump_active == True:
+                    time.sleep(2)
+                    self.data["ACTUATOR"]["PUMP"] = 0
+                    self.pump_active = False
+                    self.state._write_state(self.data)
 
             except Exception as e:
                 log.error(f"[자동 제어] 자동 제어 중 에러가 발생하였습니다: {e}")
