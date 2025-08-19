@@ -63,6 +63,7 @@ class AutoController:
                     log.info("[제어] 토양 습도가 낮습니다. 펌프를 작동합니다.")
                     self.data["ACTUATOR"]["PUMP"] = 255
                     time.sleep(2)
+                    log.info("[제어] 펌프를 제어 종료.")
                     self.data["ACTUATOR"]["PUMP"] = 0
 
                 self.state._write_state(self.data)
