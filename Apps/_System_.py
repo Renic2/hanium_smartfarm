@@ -15,7 +15,7 @@ from datetime import datetime
 from Utility import log
 
 class SystemState:  # 시스템의 현재 상태와 설정 관리
-    def __init__(self, filepath="Apps/Value.json"):
+    def __init__(self, filepath="Value.json"):
         self.filepath = filepath
         self.file_lock = threading.Lock() # 파일에 여러 스레드가 접근하는 것을 방지
         self.last_updated = None
