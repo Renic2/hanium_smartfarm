@@ -47,8 +47,7 @@ class SystemState:
                 with open(self.filepath, "r", encoding="utf-8") as f:
                     return json.load(f)
 
-    # ★★★★★ 핵심 수정 부분 ★★★★★
-    def update_values(self, update_data: dict, force_actuator_update=False):
+    def update_values(self, update_data: dict):
         with self.file_lock:
             current_data = self.get_all_data()
             is_updated = False
@@ -57,7 +56,7 @@ class SystemState:
                 if current_data['MODE'] != update_data['MODE']:
                     current_data['MODE'] = update_data['MODE']
                     is_updated = True
-                    # 수동 모드로 변경 시 모든 자동 제어 액추에이터를 끔 (안전 조치)
+                    # 수동 모드로 바뀔 때 안전을 위해 팬, 펌프, 히터를 끔
                     if update_data['MODE'] == 'MANUAL':
                         current_data['ACTUATOR']['FAN'] = 0
                         current_data['ACTUATOR']['PUMP'] = 0
@@ -67,13 +66,19 @@ class SystemState:
                 current_data['TARGET'].update(update_data['TARGET'])
                 is_updated = True
 
+            # ★★★ 핵심 수정: 'AUTO' 모드일 때도 업데이트 허용 ★★★
             if 'ACTUATOR' in update_data and isinstance(update_data['ACTUATOR'], dict):
-                # Auto_control.py에서의 호출 (AUTO 모드) 또는 API를 통한 수동 제어일 때만 허용
-                if current_data['MODE'] == 'AUTO' or force_actuator_update:
+                # API를 통한 수동 제어는 'MANUAL' 모드일 때만 허용
+                if current_data['MODE'] == 'MANUAL':
+                    current_data['ACTUATOR'].update(update_data['ACTUATOR'])
+                    is_updated = True
+                # 자동 제어 로직은 'AUTO' 모드일 때만 허용
+                elif current_data['MODE'] == 'AUTO':
                     current_data['ACTUATOR'].update(update_data['ACTUATOR'])
                     is_updated = True
                 else:
-                    log.warning(f"ACTUATOR 업데이트가 무시되었습니다: 현재 모드({current_data['MODE']})에서는 허용되지 않습니다.")
+                    log.warning("ACTUATOR 업데이트가 무시되었습니다.")
+
 
             if is_updated:
                 self._write_state(current_data)

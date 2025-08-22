@@ -54,7 +54,7 @@ if __name__ == "__main__":
         hardware = HardwareController(state)
         aws = AWSHandler(state)
         cli = CameraHandler(hardware, aws)
-        auto_control = AutoController(state)
+        auto_control = AutoController(state, hardware)
         log.info("모든 요소들이 초기화되엇습니다.")
 
         # 백그라운드 스레드 시작
