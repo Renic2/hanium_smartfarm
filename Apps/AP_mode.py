@@ -61,7 +61,7 @@ if __name__ == '__main__':
         log.info("스마트팜 어플리케이션을 시작합니다.")
         
         # main.py를 별도의 프로세스로 실행
-        main_script_path = os.path.join(script_dir, "main.py")
+        main_script_path = os.path.join(script_dir, "Main.py")
         subprocess.run([python_executable, main_script_path])
 
         log.info("네트워크 체크가 끝났습니다. 다음 단계로 진행합니다.")

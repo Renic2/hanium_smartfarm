@@ -33,4 +33,5 @@ void loop() {
         
         // 읽어온 명령어를 처리 함수로 넘겨줍니다.
         carefarm.processSerialCommand(cmd);
+    }
 }
