@@ -53,7 +53,7 @@ if __name__ == "__main__":
         state = SystemState()
         hardware = HardwareController(state)
         aws = AWSHandler(state)
-        cli = CameraHandler(hardware, aws)
+        #cli = CameraHandler(hardware, aws)
         auto_control = AutoController(state, hardware)
         log.info("모든 요소들이 초기화되엇습니다.")
 
