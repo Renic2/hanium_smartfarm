@@ -27,8 +27,8 @@ private:
     const int SOIL_MOISTURE_PIN = A0;
     const int DHT_PIN = 2;
     const int COOLING_FAN_PIN = 3;
-    const int WATER_PUMP_PIN = 4;
-    const int LED_LIGHT_PIN = 5;
+    const int WATER_PUMP_PIN = 5;
+    const int LED_LIGHT_PIN = 4;
     const int LED_PLANT_PIN = 6;
     const int THERMAL_PAD_PIN = 7;
 
