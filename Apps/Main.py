@@ -72,7 +72,7 @@ if __name__ == "__main__":
             state_instance=state,
             hardware_instance=hardware,
             camera_instance=cli
-        )
+        ) 
 
     except Exception as e:
         log.error(f"An unhandled error occurred in main: {e}", exc_info=True)

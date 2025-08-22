@@ -55,7 +55,7 @@ class AutoController:
 
                 if not is_pumping and float(sensors["SOIL"]) < float(targets["TARGET_SOIL_MOISTURE"]) and (current_time - self.last_pump_time > 10):
                     log.info("[Auto Control] Soil moisture low. Activating PUMP.")
-                    current_data["ACTUATOR"]["PUMP"] = 255
+                    current_data["ACTUATOR"]["PUMP"] = 100
                     self.last_pump_time = current_time
                 
                 elif is_pumping and (current_time - self.last_pump_time > 2):
