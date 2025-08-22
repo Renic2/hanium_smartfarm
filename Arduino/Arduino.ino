@@ -1,0 +1,36 @@
+#include "CareFarm.h"
+
+CareFarm carefarm; // CareFarm 객체 생성
+String cmd;
+
+unsigned long last_sensor_read_time = 0;
+unsigned long last_heartbeat_time = 0;
+
+void setup() {
+    Serial.begin(9600);
+    carefarm.initialize();
+}
+
+void loop() {
+    unsigned long current_time = millis();
+
+    // 2초마다 센서 데이터 읽고 전송
+    if (current_time - last_sensor_read_time >= 2000) {
+        last_sensor_read_time = current_time;
+        carefarm.readSensors();
+    }
+
+    // 5초마다 Heartbeat 전송
+    if (current_time - last_heartbeat_time >= 5000) {
+        last_heartbeat_time = current_time;
+        carefarm.sendHeartbeat();
+    }
+
+    // 시리얼 명령은 항상 확인
+    if (Serial.available() > 0) {
+        // 줄바꿈 문자(\n)를 만날 때까지 들어온 데이터를 모두 읽습니다.
+        String cmd = Serial.readStringUntil('\n');
+        
+        // 읽어온 명령어를 처리 함수로 넘겨줍니다.
+        carefarm.processSerialCommand(cmd);
+}
