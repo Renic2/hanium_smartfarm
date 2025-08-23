@@ -34,6 +34,8 @@ def graceful_shutdown(signum, frame):
         hardware.stop()
     if aws:
         aws.stop_mqtt_listener()
+    if cli:
+        cli.stop()
     
     log.info("모든 기능 정지. 이제 나가 주시길 바랍니다.")
     exit(0)
@@ -53,7 +55,7 @@ if __name__ == "__main__":
         state = SystemState()
         hardware = HardwareController(state)
         aws = AWSHandler(state)
-        #cli = CameraHandler(hardware, aws)
+        cli = CameraHandler(state, hardware, aws)
         auto_control = AutoController(state, hardware)
         log.info("모든 요소들이 초기화되엇습니다.")
 
@@ -61,6 +63,7 @@ if __name__ == "__main__":
         # 하드웨어 통신과 자동 제어는 백그라운드에서 계속 실행
         hardware.start()
         auto_control.start()
+        cli.start()
         
         # AWS MQTT 리스너 시작 (인증서 설정 후 주석 해제 필요)
         aws.start_mqtt_listener()
