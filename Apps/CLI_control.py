@@ -29,20 +29,26 @@ class CameraHandler:
         """조명 상태를 저장 및 복원하며 안전하게 사진을 촬영하고 업로드합니다."""
         log.info("사진 촬영 시퀀스를 시작합니다...")
 
-        # ★★★★★ 충돌 방지 로직 ★★★★★
         # 1. 현재 조명 상태를 파일에서 직접 읽어와 저장
-        original_actuators = self.state.get_all_data().get("ACTUATOR", {})
+        current_data = self.state.get_all_data()
+        original_actuators = current_data.get("ACTUATOR", {})
         original_grow_light = original_actuators.get("GROW_LIGHT", 0)
         original_white_led = original_actuators.get("WHITE_LED", 0)
         log.info(f"촬영 전 조명 상태 저장: 생장등={original_grow_light}, 백색등={original_white_led}")
 
         local_filepath = ""
         try:
-            # 2. 사진 촬영을 위한 조명으로 변경
+            # 2. 사진 촬영을 위한 조명으로 변경 (*** 여기가 수정된 부분 ***)
+            # send_command 대신 state.update_values 사용
             log.info("사진 촬영용 조명으로 변경합니다...")
-            self.hardware.send_command("GROW_LIGHT", 0)
-            self.hardware.send_command("WHITE_LED", 1)
-            time.sleep(2)  # 조명이 안정화될 때까지 대기
+            update_data_for_capture = {
+                "ACTUATOR": {
+                    "GROW_LIGHT": 0,
+                    "WHITE_LED": 1
+                }
+            }
+            self.state.update_values(update_data_for_capture)
+            time.sleep(2)  # 조명이 안정화되고 Arduino가 상태를 반영할 때까지 대기
 
             # 3. 사진 촬영
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -65,10 +71,15 @@ class CameraHandler:
         except Exception as e:
             log.error(f"사진 촬영 시퀀스 중 예기치 않은 오류 발생: {e}")
         finally:
-            # 5. 조명을 원래 상태로 복원 (가장 중요!)
+            # 5. 조명을 원래 상태로 복원 (가장 중요!) (*** 여기가 수정된 부분 ***)
             log.info(f"조명 상태를 원래대로 복원합니다: 생장등={original_grow_light}, 백색등={original_white_led}")
-            self.hardware.send_command("GROW_LIGHT", original_grow_light)
-            self.hardware.send_command("WHITE_LED", original_white_led)
+            update_data_for_restore = {
+                "ACTUATOR": {
+                    "GROW_LIGHT": original_grow_light,
+                    "WHITE_LED": original_white_led
+                }
+            }
+            self.state.update_values(update_data_for_restore)
             
             # 임시 파일 삭제
             if local_filepath and os.path.exists(local_filepath):
