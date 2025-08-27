@@ -104,9 +104,8 @@ async def control_actuator(command: dict):
     value = command.get("value")
     if device and value is not None:
         log.info(f"[API] Manual control command received: {command}")
-        # ★★★★★ 핵심 수정 부분 ★★★★★
-        # 수동 제어(force_actuator_update=True)로 상태 업데이트
-        system_state.update_values({"ACTUATOR": {device: value}}, force_actuator_update=True)
+        # 불필요한 'force_actuator_update=True' 인자를 삭제합니다.
+        system_state.update_values({"ACTUATOR": {device: value}})
         return {"status": "success", "command": command}
     raise HTTPException(status_code=400, detail="Invalid command format.")
 
